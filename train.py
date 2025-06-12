@@ -9,7 +9,7 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-# Dataset files
+
 files = [
     'Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv',
     'Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv', 
@@ -21,7 +21,7 @@ files = [
     'Wednesday-workingHours.pcap_ISCX.csv'
 ]
 
-# HIGH CONFIDENCE FEATURES 
+
 RELIABLE_FEATURES = [
     'src_ip',
     'dst_ip', 
@@ -85,11 +85,10 @@ def load_and_combine_data():
         
         df = pd.read_csv(file_path)
         
-        # Clean column names
+
         df.columns = df.columns.str.strip()
         
-        # Handle infinite values
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
         
         dfs.append(df)
     
@@ -101,10 +100,10 @@ def preprocess_data(df):
     
     label_col = df.columns[-1]
     
-    # Clean labels
+
     df[label_col] = df[label_col].str.strip()
     
-    # Filter features (exclude categorical IP/port features for now)
+
     categorical_features = ['src_ip', 'dst_ip', 'src_port', 'dst_port', 'protocol']
     numerical_features = [f for f in features_to_keep if f not in categorical_features]
     
@@ -114,12 +113,12 @@ def preprocess_data(df):
     print(f"Using {len(available_features)} numerical features")
     print(f"Skipped categorical: {[f for f in categorical_features if f in df.columns]}")
     
-    # Handle missing values
+
     features_df = features_df.dropna()
     
-    # Remove highly correlated features
+
     corr_matrix = features_df[available_features].corr().abs()
-    # symmetric matrices (like correlation matrices)
+
     upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
     high_corr_features = [column for column in upper_tri.columns if any(upper_tri[column] > 0.95)]
     
@@ -127,11 +126,10 @@ def preprocess_data(df):
         print(f"Removing {len(high_corr_features)} highly correlated features")
         available_features = [f for f in available_features if f not in high_corr_features]
     
-    # Separate features and labels
+
     X = features_df[available_features]
     y = features_df[label_col]
-    
-    # Binary classification: Normal vs Anomaly
+
     y_binary = y.apply(lambda x: 0 if x.upper() in ['BENIGN'] else 1)
     
     print(f"Final feature count: {len(available_features)}")
@@ -144,10 +142,10 @@ def preprocess_data(df):
 def train_model(X, y):
 
     
-    # Use much smaller sample to prevent memorization
-    if len(X) > 250000:
-        print("Subsampling to 50k records to prevent overfitting...")
-        X_sample, _, y_sample, _ = train_test_split(X, y, train_size=250000, random_state=42, stratify=y)
+
+    if len(X) > 500000:
+        print("Subsampling to 500k records to prevent overfitting...")
+        X_sample, _, y_sample, _ = train_test_split(X, y, train_size=500000, random_state=42, stratify=y)
         X, y = X_sample, y_sample
     
     # Run cross-validation first
@@ -163,7 +161,7 @@ def train_model(X, y):
     
     print(f"Train: {X_train.shape[0]}, Val: {X_val.shape[0]}, Test: {X_test.shape[0]}")
     
-    # Extremely aggressive regularization
+
     params = {
         'objective': 'binary',
         'metric': 'binary_logloss',
@@ -183,35 +181,35 @@ def train_model(X, y):
         'is_unbalance': True
     }
     
-    # Create datasets
+
     train_data = lgb.Dataset(X_train, label=y_train)
     val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
     
-    # Train model with very conservative stopping
+
     print("Training LightGBM with aggressive regularization...")
     model = lgb.train(
         params,
         train_data,
         valid_sets=[val_data],
         num_boost_round=100,       # Much fewer rounds
-        callbacks=[lgb.early_stopping(10), lgb.log_evaluation(20)]  # Very early stopping
+        callbacks=[lgb.early_stopping(10), lgb.log_evaluation(20)]  
     )
     
-    # Evaluate on validation
+
     y_val_pred = model.predict(X_val, num_iteration=model.best_iteration)
     y_val_pred_class = (y_val_pred > 0.5).astype(int)
     
     print("\nValidation Results:")
     print(classification_report(y_val, y_val_pred_class, target_names=['Normal', 'Anomaly']))
     
-    # Final test evaluation
+ 
     y_test_pred = model.predict(X_test, num_iteration=model.best_iteration)
     y_test_pred_class = (y_test_pred > 0.5).astype(int)
     
     print("\nTest Results:")
     print(classification_report(y_test, y_test_pred_class, target_names=['Normal', 'Anomaly']))
     
-    # Feature importance
+
     importance = model.feature_importance(importance_type='gain')
     feature_imp = pd.DataFrame({
         'feature': X.columns,
@@ -225,13 +223,13 @@ def train_model(X, y):
 
 def save_artifacts(model, features):
     
-    # Save model
+ 
     model.save_model('cic_ids_binary_model.txt')
     
-    # Save feature list
+
     joblib.dump(features, 'feature_names.pkl')
-    
-    # Save model params for inference
+
+
     model_info = {
         'n_classes': 2,
         'classes': ['Normal', 'Anomaly'],
@@ -247,16 +245,16 @@ def save_artifacts(model, features):
     print("- model_info.pkl")
 
 if __name__ == "__main__":
-    # Load and combine data
+
     df = load_and_combine_data()
     
-    # Preprocess for binary classification
+
     X, y, features = preprocess_data(df)
     
-    # Train model
+
     model, X_test, y_test, y_pred = train_model(X, y)
     
-    # Save artifacts
+
     save_artifacts(model, features)
     
     print(f"\nTraining complete. Final dataset shape: {X.shape}")
