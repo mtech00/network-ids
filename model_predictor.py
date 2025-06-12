@@ -2,12 +2,14 @@ import pandas as pd
 import joblib
 import lightgbm as lgb
 from config import MODEL_FILE, FEATURE_NAMES_FILE, MODEL_INFO_FILE, THRESHOLD
+from spike_detector import SpikeDetector
 
 class ModelPredictor:
     def __init__(self):
         self.model = None
         self.feature_names = None
         self.model_info = None
+        self.spike_detector = SpikeDetector()
         self.load_model()
     
     def load_model(self):
@@ -33,6 +35,11 @@ class ModelPredictor:
         df = df[self.feature_names]
         
         prob = self.model.predict(df)[0]
+        
+        if self.spike_detector.detect_spike():
+            prob += 0.3
+            prob = min(prob, 1.0)
+        
         prediction = int(prob > THRESHOLD)
         
         return prob, prediction
