@@ -3,6 +3,7 @@ import joblib
 import lightgbm as lgb
 from config import MODEL_FILE, FEATURE_NAMES_FILE, MODEL_INFO_FILE, THRESHOLD
 from spike_detector import SpikeDetector
+from disk_read_detector import DiskReadDetector
 
 class ModelPredictor:
     def __init__(self):
@@ -10,6 +11,7 @@ class ModelPredictor:
         self.feature_names = None
         self.model_info = None
         self.spike_detector = SpikeDetector()
+        self.disk_detector = DiskReadDetector()
         self.load_model()
     
     def load_model(self):
@@ -27,7 +29,6 @@ class ModelPredictor:
         
         df = pd.DataFrame([features])
         
-        # Add missing features as zeros
         missing = set(self.feature_names) - set(df.columns)
         for feat in missing:
             df[feat] = 0
@@ -37,9 +38,15 @@ class ModelPredictor:
         prob = self.model.predict(df)[0]
         
         if self.spike_detector.detect_spike():
-            prob += 0.3
-            prob = min(prob, 1.0)
+            prob += 0.1
         
+        disk_spike, high_volume = self.disk_detector.detect_spike()
+        if disk_spike:
+            prob += 0.1
+        if high_volume:
+            prob += 0.1
+        
+        prob = min(prob, 1.0)
         prediction = int(prob > THRESHOLD)
         
         return prob, prediction
