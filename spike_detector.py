@@ -11,7 +11,7 @@ class SpikeDetector:
         self.baseline_collected = False
         
     def collect_baseline(self, duration=30, interval=1):
-        """Collect baseline data for threshold calculation"""
+
         for _ in range(duration):
             self.cpu_history.append(psutil.cpu_percent(interval=0.1))
             self.mem_history.append(psutil.virtual_memory().percent)
