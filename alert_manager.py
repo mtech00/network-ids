@@ -14,7 +14,7 @@ class AlertManager:
         self.source_tracking = defaultdict(list)
         self.port_scanning_detection = defaultdict(set)
         self.time_window_attacks = deque(maxlen=1000)
-        #self.redis.flushdb()
+        self.redis.flushdb()
     
     def is_whitelisted(self, flow_key):
         for pattern in WHITELIST_PATTERNS:
