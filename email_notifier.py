@@ -49,11 +49,13 @@ Please investigate immediately if this is a Critical or High severity alert.
                 server.login(self.username, self.password)
                 server.send_message(msg)
                 
-            print(f"✓ Alert email sent: {alert['severity']} - {alert['attack_type']}")
+
+
+            print(f" Alert email sent: {alert['severity']} - {alert['attack_type']}")
             return True
             
         except Exception as e:
-            print(f"✗ Email sending failed: {e}")
+            print(f" Email sending failed: {e}")
             return False
     
     def send_test_email(self):
