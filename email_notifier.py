@@ -1,15 +1,16 @@
 import smtplib
 from email.message import EmailMessage
 import datetime
+from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL, TO_EMAIL
 
 class EmailNotifier:
     def __init__(self):
-        self.smtp_server = "sandbox.smtp.mailtrap.io"
-        self.smtp_port = 587
-        self.username = "username"  # Change this to your Mailtrap username
-        self.password = "password"  # Change this to your Mailtrap password
-        self.from_email = "ids-system@security.local"
-        self.to_email = "admin@security.local"  
+        self.smtp_server = SMTP_SERVER
+        self.smtp_port = SMTP_PORT
+        self.username = SMTP_USERNAME
+        self.password = SMTP_PASSWORD
+        self.from_email = FROM_EMAIL
+        self.to_email = TO_EMAIL
     def send_alert_email(self, alert):
         try:
             msg = EmailMessage()
