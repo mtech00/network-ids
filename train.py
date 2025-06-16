@@ -81,7 +81,6 @@ def load_and_combine_data():
     
     for file in files:
         file_path = base_path / file
-        print(f"Loading {file}...")
         
         df = pd.read_csv(file_path)
         
@@ -144,7 +143,7 @@ def train_model(X, y):
     
 
     if len(X) > 500000:
-        print("Subsampling to 500k records to prevent overfitting...")
+        print("Subsampling to 500k records to prevent overfitting")
         X_sample, _, y_sample, _ = train_test_split(X, y, train_size=500000, random_state=42, stratify=y)
         X, y = X_sample, y_sample
     
@@ -166,12 +165,12 @@ def train_model(X, y):
         'objective': 'binary',
         'metric': 'binary_logloss',
         'boosting_type': 'gbdt',
-        'num_leaves': 5,           # Very small
-        'learning_rate': 0.01,     # Very slow
+        'num_leaves': 5,           
+        'learning_rate': 0.01,     
         'feature_fraction': 0.5,   # Use only half features each iteration
         'bagging_fraction': 0.5,   # Use only half samples each iteration
         'bagging_freq': 1,         # Every iteration
-        'min_data_in_leaf': 500,   # Much higher minimum
+        'min_data_in_leaf': 500,   
         'lambda_l1': 1.0,          # Strong L1 regularization
         'lambda_l2': 1.0,          # Strong L2 regularization
         'min_gain_to_split': 1.0,  # Much higher threshold
@@ -186,7 +185,6 @@ def train_model(X, y):
     val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
     
 
-    print("Training LightGBM with aggressive regularization...")
     model = lgb.train(
         params,
         train_data,
@@ -258,4 +256,3 @@ if __name__ == "__main__":
     save_artifacts(model, features)
     
     print(f"\nTraining complete. Final dataset shape: {X.shape}")
-    print("Binary anomaly detection model ready.")
