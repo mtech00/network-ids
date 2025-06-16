@@ -20,7 +20,15 @@ MODEL_FILE = "cic_ids_binary_model.txt"
 FEATURE_NAMES_FILE = "feature_names.pkl"
 MODEL_INFO_FILE = "model_info.pkl"
 
-# Redis stuff
+# Email settings
+SMTP_SERVER = "sandbox.smtp.mailtrap.io"
+SMTP_PORT = 587
+SMTP_USERNAME = "username"
+SMTP_PASSWORD = "password"
+FROM_EMAIL = "ids-system@security.local"
+TO_EMAIL = "admin@security.local"
+
+# Redis 
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 REDIS_DB = 0
