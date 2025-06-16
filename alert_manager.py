@@ -5,6 +5,8 @@ import datetime
 import redis
 from collections import defaultdict, deque
 from config import REDIS_HOST, REDIS_PORT, REDIS_DB, MAX_ALERTS, WHITELIST_PATTERNS
+from email_notifier import EmailNotifier
+
 
 class AlertManager:
     def __init__(self):
@@ -15,6 +17,8 @@ class AlertManager:
         self.port_scanning_detection = defaultdict(set)
         self.time_window_attacks = deque(maxlen=1000)
         self.redis.flushdb()
+        self.email_notifier = EmailNotifier()
+
     
     def is_whitelisted(self, flow_key):
         for pattern in WHITELIST_PATTERNS:
@@ -24,6 +28,7 @@ class AlertManager:
     
     def detect_attack_patterns(self, flow_key, prob):
         """Detect specific attack patterns for visualization"""
+        # assuming flow_key have all the necessary parts
         parts = flow_key.split('-')
         src = parts[0] if len(parts) > 0 else 'Unknown'
         dst = parts[1] if len(parts) > 1 else 'Unknown'
@@ -32,6 +37,7 @@ class AlertManager:
         current_time = time.time()
         
         # Extract IPs and ports
+        # where is the src_port ? and assumes flowkey is well formatted
         try:
             src_ip = src.split(':')[0]
             dst_ip = dst.split(':')[0]
@@ -47,9 +53,9 @@ class AlertManager:
             attack_type = 'Port_Scan'
         
         # High confidence attacks
-        if prob > 0.9:
+        if prob > 0.18:
             attack_type = 'High_Confidence_Attack'
-        elif prob > 0.8:
+        elif prob > 0.15:
             attack_type = 'Medium_Confidence_Attack'
         
         # Rapid fire attacks (DDoS-like)
@@ -71,6 +77,8 @@ class AlertManager:
             return None
         
         timestamp = datetime.datetime.now()
+
+        # assuming flow_key have all the necessary parts
         parts = flow_key.split('-')
         src = parts[0] if len(parts) > 0 else 'Unknown'
         dst = parts[1] if len(parts) > 1 else 'Unknown'
@@ -80,7 +88,7 @@ class AlertManager:
         attack_type = self.detect_attack_patterns(flow_key, prob)
         
         # Severity classification
-        if prob > 0.2:
+        if prob > 0.16:
             severity = 'Critical'
         elif prob > 0.15:
             severity = 'High'
@@ -131,7 +139,8 @@ class AlertManager:
             print(f"{color}[{alert['severity']} {alert['attack_type']}] {alert['timestamp']} | "
                   f"{alert['src']} -> {alert['dst']} ({alert['protocol']}) | "
                   f"Confidence: {alert['confidence']:.3f}\033[0m")
-            
+            if alert['severity'] in ['Critical', 'High']:
+                self.email_notifier.send_alert_email(alert)
         except Exception as e:
             print(f"Redis error: {e}")
     
@@ -142,7 +151,7 @@ class AlertManager:
         
         # Hourly attack patterns
         hourly_key = f"hourly_attacks:{current_hour}"
-        self.redis.hincrby(hourly_key, alert['attack_type'], 1)
+        self.redis.hincrby(hourly_key, alert['attack_type'], 1) # attack type is used or not ? 
         self.redis.expire(hourly_key, 86400)  # Expire after 24 hours
         
         # Source IP tracking
@@ -234,6 +243,9 @@ class AlertManager:
     def get_anomaly_count(self):
         return self.anomaly_count
     
+
+
+    # analyze it can be unnecessary
     def cleanup_old_patterns(self):
         """Clean up old pattern data to prevent memory issues"""
         try:
